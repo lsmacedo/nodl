@@ -1,5 +1,6 @@
-import * as acorn from 'acorn'
+import { parse } from '@babel/parser'
 import escodegen from 'escodegen'
+import { PARSER_OPTIONS } from '../../shared/ast';
 
 export type LineMap = (number | undefined)[];
 
@@ -13,16 +14,12 @@ export function collapseStatements(source: string): {
   lineMap: LineMap;
 } {
   try {
-    const ast = acorn.parse(source, {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      locations: true,
-    });
+    const ast = parse(source, PARSER_OPTIONS);
 
     const outputLines = [];
     const lineMap = [];
 
-    for (const node of ast.body) {
+    for (const node of ast.program.body) {
       const flat = escodegen
         .generate(node, { format: { compact: false } })
         .replace(/\n/g, ' ');
@@ -33,6 +30,7 @@ export function collapseStatements(source: string): {
 
     return { code: outputLines.join('\n'), lineMap };
   } catch (err) {
+    console.error(err)
     return { code: source, lineMap: [] }
   }
 }

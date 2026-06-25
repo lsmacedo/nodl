@@ -22,25 +22,12 @@ import type {
   ExportSpecifier,
   File,
 } from '@babel/types'
+import { PARSER_OPTIONS } from '../../../shared/ast'
 
 // @babel/traverse has CJS/ESM interop issues — handle both forms
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const traverseImport = require('@babel/traverse') as { default?: Function } & Function
 const traverse: Function = traverseImport.default ?? traverseImport
-
-// -------------------------------------------------------------------
-// Parser configuration
-// -------------------------------------------------------------------
-
-const PARSER_OPTIONS = {
-  sourceType: 'module' as const,
-  allowImportExportEverywhere: true, // Permissive: scratchpad code may be unusual
-  allowAwaitOutsideFunction: true,   // Top-level await support
-  allowReturnOutsideFunction: true,  // Bare return is valid in scratchpad
-  errorRecovery: true,               // Partial AST on incomplete/invalid code
-  plugins: ['typescript', 'jsx'] as ('typescript' | 'jsx')[],
-  ranges: true,                      // Provide start/end character offsets
-}
 
 // -------------------------------------------------------------------
 // Import/export transformation helpers
