@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 import type { OutputEntry, ExecutionResult } from '../../shared/types'
+import { LineMap } from '../utils/collapseStatements'
 
 interface TabOutput {
   entries: OutputEntry[]
+  lineMap: LineMap
   lastResult: ExecutionResult | null
 }
 
@@ -14,6 +16,7 @@ interface OutputState {
   buffer: OutputEntry[]
 
   setActiveTabId: (id: string) => void
+  setLineMap: (lineMap: LineMap) => void
   addEntry: (entry: OutputEntry) => void
   setDone: (result: ExecutionResult) => void
   setRunning: () => void
@@ -25,7 +28,7 @@ interface OutputState {
 }
 
 function emptyOutput(): TabOutput {
-  return { entries: [], lastResult: null }
+  return { entries: [], lineMap: [], lastResult: null }
 }
 
 export const useOutputStore = create<OutputState>((set, get) => ({
@@ -45,16 +48,29 @@ export const useOutputStore = create<OutputState>((set, get) => ({
       return { buffer: [...state.buffer, entry] }
     }),
 
+  setLineMap: (lineMap) =>
+    set((state) => {
+      const tabId = state.activeTabId
+      const existing = state.outputs[tabId]
+      return {
+        outputs: {
+          ...state.outputs,
+          [tabId]: { ...existing, lineMap }
+        }
+      }
+    }),
+
   setDone: (result) =>
     set((state) => {
       const tabId = state.activeTabId
+      const existing = state.outputs[tabId]
       // Flush buffer → replace old output atomically (no flash)
       return {
         isRunning: false,
         buffer: [],
         outputs: {
           ...state.outputs,
-          [tabId]: { entries: state.buffer, lastResult: result }
+          [tabId]: { ...existing, entries: state.buffer, lastResult: result }
         }
       }
     }),

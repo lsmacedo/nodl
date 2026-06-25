@@ -10,15 +10,23 @@ import { useSettingsStore } from '../../store/settings'
 import { entriesToText } from '../../utils/outputToText'
 import { withShortcut } from '../../utils/shortcut'
 import type { OutputEntry } from '../../../shared/types'
+import { LineMap } from '../../utils/collapseStatements'
 
-function groupByLine(entries: OutputEntry[]): { lined: Map<number, OutputEntry[]>; unlined: OutputEntry[] } {
+function groupByLine(
+  entries: OutputEntry[],
+  lineMap: LineMap
+): {
+  lined: Map<number, OutputEntry[]>;
+  unlined: OutputEntry[];
+} {
   const lined = new Map<number, OutputEntry[]>()
   const unlined: OutputEntry[] = []
   for (const entry of entries) {
-    if (entry.line) {
-      const group = lined.get(entry.line) ?? []
+    const line = entry.line ? lineMap[entry.line] : undefined
+    if (line) {
+      const group = lined.get(line) ?? []
       group.push(entry)
-      lined.set(entry.line, group)
+      lined.set(line, group)
     } else {
       unlined.push(entry)
     }
@@ -83,7 +91,14 @@ export function computeAdjustedHeights(
 const STOP_BUTTON_DELAY = 3000
 
 export function OutputPane() {
-  const { entries, isRunning, lastResult, stop, clear } = useCodeExecution()
+  const {
+    entries,
+    isRunning,
+    lastResult,
+    lineMap,
+    stop,
+    clear,
+  } = useCodeExecution()
   const scrollRef = useRef<HTMLDivElement>(null)
   const fontSize = useSettingsStore((s) => s.fontSize)
   const activeTab = useTabsStore((s) => s.activeTab)
@@ -164,7 +179,7 @@ export function OutputPane() {
   const toggleOutputMode = useUIStore((s) => s.toggleOutputMode)
   const lineHeight = Math.round(fontSize * 1.5)
   const lineHeights = useScrollSync((s) => s.lineHeights)
-  const { lined, unlined } = useMemo(() => groupByLine(entries), [entries])
+  const { lined, unlined } = useMemo(() => groupByLine(entries, lineMap), [entries, lineMap])
   const errorEntries = useMemo(() => unlined.filter((e) => e.method === 'error'), [unlined])
   const nonErrorUnlined = useMemo(() => unlined.filter((e) => e.method !== 'error'), [unlined])
   const adjustedHeights = useMemo(

@@ -3,6 +3,7 @@ import { useOutputStore } from '../store/output'
 import { useTabsStore } from '../store/tabs'
 import * as bridge from '../ipc/bridge'
 import type { OutputEntry, ExecutionResult } from '../../shared/types'
+import { collapseStatements } from '../utils/collapseStatements'
 
 const EMPTY_ENTRIES: OutputEntry[] = []
 const NO_RESULT: ExecutionResult | null = null
@@ -14,6 +15,7 @@ export function useCodeExecution() {
 
   // Use stable fallback references to avoid infinite re-renders
   const entries = useOutputStore((s) => s.outputs[s.activeTabId]?.entries ?? EMPTY_ENTRIES)
+  const lineMap = useOutputStore((s) => s.outputs[s.activeTabId]?.lineMap)
   const lastResult = useOutputStore((s) => s.outputs[s.activeTabId]?.lastResult ?? NO_RESULT)
 
   const run = useCallback(() => {
@@ -21,7 +23,11 @@ export function useCodeExecution() {
     // Ensure output store knows the active tab before clearing
     useOutputStore.getState().setActiveTabId(useTabsStore.getState().activeTabId)
     useOutputStore.getState().setRunning()
-    bridge.runCode({ code: tab.code, language: tab.language })
+
+    const collapsed = collapseStatements(tab.code)
+    useOutputStore.getState().setLineMap(collapsed.lineMap)
+
+    bridge.runCode({ code: collapsed.code, language: tab.language })
   }, [])
 
   const stop = useCallback(() => {
@@ -32,5 +38,5 @@ export function useCodeExecution() {
     useOutputStore.getState().clear()
   }, [])
 
-  return { run, stop, clear, isRunning, entries, lastResult }
+  return { run, stop, clear, lineMap, isRunning, entries, lastResult }
 }
